@@ -7,3 +7,8 @@ venv/
 db.sqlite3
 staticfiles/
 .vscode/
+media/
+# Uploaded and test documents
+media/
+documents/test*.txt
+documents/text_documents*.txt

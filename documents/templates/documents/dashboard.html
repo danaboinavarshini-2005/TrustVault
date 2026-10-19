@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustVault Dashboard</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            margin: 0;
+            color: #1e293b;
+        }
+
+        header {
+            background: #1e3a8a;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        header h2 {
+            margin: 0;
+        }
+
+        main {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        input,
+        select {
+            display: block;
+            box-sizing: border-box;
+            margin: 12px 0;
+            padding: 10px;
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+        }
+
+        button,
+        .button {
+            display: inline-block;
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .logout-button,
+        .revoke-button {
+            background: #dc2626;
+        }
+
+        .message {
+            padding: 12px;
+            background: #dcfce7;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .error {
+            background: #fee2e2;
+        }
+
+        .document-item {
+            padding: 16px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .document-item:last-child {
+            border-bottom: none;
+        }
+
+        .document-item form {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 8px;
+        }
+
+        .document-item label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .muted {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        a {
+            color: #1d4ed8;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h2>TrustVault | My Documents</h2>
+
+    <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="logout-button">
+            Logout
+        </button>
+    </form>
+</header>
+
+<main>
+
+    <!-- Display messages -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message
+                {% if message.tags == 'error' %}error{% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Upload document -->
+    <div class="card">
+        <h2>Upload a Document</h2>
+
+        <form method="post"
+              action="{% url 'dashboard' %}"
+              enctype="multipart/form-data">
+
+            {% csrf_token %}
+
+            <label for="title">Document Title</label>
+            <input
+                type="text"
+                id="title"
+                name="title"
+                maxlength="200"
+                placeholder="Enter document title"
+                required
+            >
+
+            <label for="file">Choose File</label>
+            <input
+                type="file"
+                id="file"
+                name="file"
+                accept=".pdf,.txt,.png,.jpg,.jpeg"
+                required
+            >
+
+            <button type="submit">
+                Upload Document
+            </button>
+        </form>
+
+        <p class="muted">
+            Allowed formats: PDF, TXT, PNG, JPG and JPEG.
+            Maximum file size: 5 MB.
+        </p>
+    </div>
+
+    <!-- My Documents -->
+    <div class="card">
+        <h2>My Documents</h2>
+
+        {% if documents %}
+            {% for document in documents %}
+
+                <div class="document-item">
+
+                    <strong>{{ document.title }}</strong>
+
+                    <p class="muted">
+                        Uploaded:
+                        {{ document.uploaded_at|date:"d M Y, H:i" }}
+                    </p>
+
+                    <a
+                        class="button"
+                        href="{% url 'download_document' document.id %}">
+                        Download
+                    </a>
+
+                    <!-- Share document -->
+                    <form
+                        method="post"
+                        action="{% url 'share_document' document.id %}">
+
+                        {% csrf_token %}
+
+                        <h3>Share this document</h3>
+
+                        <label for="username-{{ document.id }}">
+                            Recipient Username
+                        </label>
+
+                        <input
+                            type="text"
+                            id="username-{{ document.id }}"
+                            name="username"
+                            placeholder="Enter the recipient's username"
+                            required
+                        >
+
+                        <label for="permission-{{ document.id }}">
+                            Permission
+                        </label>
+
+                        <select
+                            id="permission-{{ document.id }}"
+                            name="permission"
+                            required>
+
+                            <option value="read">
+                                READ — Can access and download
+                            </option>
+
+                            <option value="edit">
+                                EDIT — Currently allows access and download
+                            </option>
+
+                        </select>
+
+                        <button type="submit">
+                            Share Document
+                        </button>
+                    </form>
+
+                    <!-- Manage existing access -->
+                    <h3>Manage Shared Access</h3>
+
+                    {% for access in document.access_permissions.all %}
+
+                        <div class="document-item">
+
+                            <p>
+                                Shared with:
+                                <strong>{{ access.user.username }}</strong>
+                            </p>
+
+                            <p>
+                                Permission:
+                                {{ access.get_permission_display }}
+                            </p>
+
+                            <form
+                                method="post"
+                                action="{% url 'revoke_document_access' document.id access.id %}"
+                                onsubmit="return confirm('Are you sure you want to revoke access for {{ access.user.username }}?');">
+
+                                {% csrf_token %}
+
+                                <button
+                                    type="submit"
+                                    class="revoke-button">
+                                    Revoke Access
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    {% empty %}
+
+                        <p class="muted">
+                            This document has not been shared with anyone.
+                        </p>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <p>You haven't uploaded any documents yet.</p>
+
+        {% endif %}
+    </div>
+
+    <!-- Documents shared with the logged-in user -->
+    <div class="card">
+        <h2>Shared With Me</h2>
+
+        {% if shared_accesses %}
+
+            {% for access in shared_accesses %}
+
+                <div class="document-item">
+
+                    <strong>{{ access.document.title }}</strong>
+
+                    <p>
+                        Shared by:
+                        {{ access.document.owner.username }}
+                    </p>
+
+                    <p>
+                        Permission:
+                        {{ access.get_permission_display }}
+                    </p>
+
+                    <a
+                        class="button"
+                        href="{% url 'download_document' access.document.id %}">
+                        Download Shared Document
+                    </a>
+
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <p>No documents have been shared with you yet.</p>
+
+        {% endif %}
+    </div>
+
+    <!-- Security information -->
+    <div class="card">
+        <h2>Security</h2>
+
+        <p>You must log in to access this dashboard.</p>
+
+        <p>
+            Only you can share documents that you own.
+            Unauthorized download attempts are recorded in the audit log.
+        </p>
+
+        <p>
+            Document owners can revoke previously granted access.
+        </p>
+
+        <p class="muted">
+            Note: EDIT permission does not yet provide document-editing
+            functionality.
+        </p>
+    </div>
+
+    <p><a href="/">Return to Home</a></p>
+
+</main>
+
+</body>
+</html>
