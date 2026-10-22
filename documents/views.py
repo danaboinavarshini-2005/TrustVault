@@ -1,3 +1,4 @@
+
 from datetime import date
 from pathlib import Path
 
@@ -8,6 +9,7 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.http import FileResponse, Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
+from django.views.decorators.http import require_POST
 
 from .models import Document, DocumentAccess, AuditLog, UserProfile
 
@@ -24,26 +26,46 @@ ALLOWED_EXTENSIONS = {
     ".jpeg",
 }
 
+ALLOWED_CONTENT_TYPES = {
+    ".pdf": {"application/pdf", "application/octet-stream"},
+    ".txt": {"text/plain", "application/octet-stream"},
+    ".png": {"image/png", "application/octet-stream"},
+    ".jpg": {"image/jpeg", "application/octet-stream"},
+    ".jpeg": {"image/jpeg", "application/octet-stream"},
+}
+
 
 def get_user_role(user):
-    """Return the user's application role, defaulting to Viewer."""
+    """Return the user's role, defaulting to Viewer."""
     if not user.is_authenticated:
         return None
 
-    profile = getattr(user, "profile", None)
-
-    if profile is None:
+    try:
+        return user.profile.role
+    except UserProfile.DoesNotExist:
         return UserProfile.VIEWER
-
-    return profile.role
 
 
 def can_upload_documents(user):
     """Only Administrators and Owners can upload documents."""
-    return get_user_role(user) in {
-        UserProfile.ADMINISTRATOR,
-        UserProfile.OWNER,
-    }
+    return (
+        user.is_authenticated
+        and get_user_role(user) in {
+            UserProfile.ADMINISTRATOR,
+            UserProfile.OWNER,
+        }
+    )
+
+
+def log_audit(user, action, result, document=None, details=""):
+    """Create an audit record."""
+    AuditLog.objects.create(
+        user=user,
+        document=document,
+        action=action,
+        result=result,
+        details=details,
+    )
 
 
 def home(request):
@@ -66,7 +88,7 @@ def dashboard(request):
     # Handle document uploads.
     if request.method == "POST":
         if not can_upload_documents(request.user):
-            AuditLog.objects.create(
+            log_audit(
                 user=request.user,
                 action="document_upload",
                 result=AuditLog.DENIED,
@@ -88,55 +110,78 @@ def dashboard(request):
                 request,
                 "Please enter a title and choose a file.",
             )
+            return redirect("dashboard")
 
-        elif len(title) > 200:
+        if len(title) > 200:
             messages.error(
                 request,
                 "The title must not exceed 200 characters.",
             )
+            return redirect("dashboard")
 
-        elif not category or len(category) > 100:
+        if not category or len(category) > 100:
             messages.error(
                 request,
-                "Category must contain 1–100 characters.",
+                "Category must contain 1-100 characters.",
             )
+            return redirect("dashboard")
 
-        elif uploaded_file.size > MAX_FILE_SIZE:
-            messages.error(
-                request,
-                "File size must not exceed 5 MB.",
-            )
+        extension = Path(uploaded_file.name).suffix.lower()
 
-        elif Path(uploaded_file.name).suffix.lower() not in ALLOWED_EXTENSIONS:
+        if extension not in ALLOWED_EXTENSIONS:
             messages.error(
                 request,
                 "Invalid file type. Upload PDF, TXT, PNG, JPG, or JPEG.",
             )
-
-        else:
-            document = Document.objects.create(
-                title=title,
-                category=category,
-                file=uploaded_file,
-                owner=request.user,
-            )
-
-            AuditLog.objects.create(
-                user=request.user,
-                document=document,
-                action="document_upload",
-                result=AuditLog.SUCCESS,
-                details="Document uploaded successfully.",
-            )
-
-            messages.success(
-                request,
-                "Document uploaded successfully!",
-            )
-
             return redirect("dashboard")
 
-    # Show only documents owned by the logged-in user.
+        if uploaded_file.size <= 0:
+            messages.error(
+                request,
+                "The uploaded file is empty.",
+            )
+            return redirect("dashboard")
+
+        if uploaded_file.size > MAX_FILE_SIZE:
+            messages.error(
+                request,
+                "File size must not exceed 5 MB.",
+            )
+            return redirect("dashboard")
+
+        content_type = (
+            getattr(uploaded_file, "content_type", "") or ""
+        ).lower()
+
+        if content_type not in ALLOWED_CONTENT_TYPES[extension]:
+            messages.error(
+                request,
+                "The uploaded file type does not match the extension.",
+            )
+            return redirect("dashboard")
+
+        document = Document.objects.create(
+            title=title,
+            category=category,
+            file=uploaded_file,
+            owner=request.user,
+        )
+
+        log_audit(
+            user=request.user,
+            document=document,
+            action="document_upload",
+            result=AuditLog.SUCCESS,
+            details="Document uploaded successfully.",
+        )
+
+        messages.success(
+            request,
+            "Document uploaded successfully!",
+        )
+        return redirect("dashboard")
+
+    # Display documents owned by the current user.
     documents = Document.objects.filter(
         owner=request.user,
     ).order_by("-uploaded_at")
@@ -147,25 +192,21 @@ def dashboard(request):
     category_query = request.GET.get("category", "").strip()
     upload_date = request.GET.get("uploaded_date", "").strip()
 
-    # Filter by document title.
     if search_query:
         documents = documents.filter(
             title__icontains=search_query,
         )
 
-    # Filter by owner username.
     if owner_query:
         documents = documents.filter(
             owner__username__icontains=owner_query,
         )
 
-    # Filter by category.
     if category_query:
         documents = documents.filter(
             category__icontains=category_query,
         )
 
-    # Filter by upload date.
     if upload_date:
         try:
             parsed_date = date.fromisoformat(upload_date)
@@ -181,9 +222,13 @@ def dashboard(request):
             )
             upload_date = ""
 
-    # Display documents shared with the logged-in user.
+    # Documents shared with the current user.
     shared_accesses = DocumentAccess.objects.filter(
         user=request.user,
+        permission__in=[
+            DocumentAccess.READ,
+            DocumentAccess.EDIT,
+        ],
     ).select_related(
         "document",
         "document__owner",
@@ -207,10 +252,7 @@ def dashboard(request):
 
 @login_required
 def edit_document(request, document_id):
-    """
-    Allow the owner or a user with explicit EDIT permission
-    to update a document's title and category.
-    """
+    """Allow owners and users with EDIT permission to edit metadata."""
     document = get_object_or_404(
         Document,
         id=document_id,
@@ -225,14 +267,13 @@ def edit_document(request, document_id):
     ).exists()
 
     if not is_owner and not has_edit_access:
-        AuditLog.objects.create(
+        log_audit(
             user=request.user,
             document=document,
             action="document_edit",
             result=AuditLog.DENIED,
             details="Edit denied: insufficient permission.",
         )
-
         raise Http404("Document not found.")
 
     if request.method == "POST":
@@ -242,13 +283,13 @@ def edit_document(request, document_id):
         if not title or len(title) > 200:
             messages.error(
                 request,
-                "Title must contain 1–200 characters.",
+                "Title must contain 1-200 characters.",
             )
 
         elif not category or len(category) > 100:
             messages.error(
                 request,
-                "Category must contain 1–100 characters.",
+                "Category must contain 1-100 characters.",
             )
 
         else:
@@ -259,7 +300,7 @@ def edit_document(request, document_id):
                 update_fields=["title", "category"],
             )
 
-            AuditLog.objects.create(
+            log_audit(
                 user=request.user,
                 document=document,
                 action="document_edit",
@@ -271,7 +312,6 @@ def edit_document(request, document_id):
                 request,
                 "Document updated successfully!",
             )
-
             return redirect("dashboard")
 
     return render(
@@ -285,6 +325,7 @@ def edit_document(request, document_id):
 
 @login_required
 def download_document(request, document_id):
+    """Allow owners and authorized users to download documents."""
     document = get_object_or_404(
         Document,
         id=document_id,
@@ -302,37 +343,40 @@ def download_document(request, document_id):
     ).exists()
 
     if not is_owner and not has_access:
-        AuditLog.objects.create(
+        log_audit(
             user=request.user,
             document=document,
             action="document_download",
             result=AuditLog.DENIED,
             details="Download denied: no permission.",
         )
-
         raise Http404("Document not found.")
 
     try:
         document.file.open("rb")
 
     except (FileNotFoundError, OSError, ValueError):
-        AuditLog.objects.create(
+        log_audit(
             user=request.user,
             document=document,
             action="document_download",
             result=AuditLog.DENIED,
             details="Download failed: file unavailable.",
         )
-
         raise Http404("Document file is unavailable.")
 
-    AuditLog.objects.create(
-        user=request.user,
-        document=document,
-        action="document_download",
-        result=AuditLog.SUCCESS,
-        details="Download authorized and file opened.",
-    )
+    try:
+        log_audit(
+            user=request.user,
+            document=document,
+            action="document_download",
+            result=AuditLog.SUCCESS,
+            details="Download authorized and file opened.",
+        )
+
+    except Exception:
+        document.file.close()
+        raise
 
     return FileResponse(
         document.file,
@@ -342,16 +386,14 @@ def download_document(request, document_id):
 
 
 @login_required
+@require_POST
 def share_document(request, document_id):
-    # Only the document owner can share it.
+    """Only the document owner can share it."""
     document = get_object_or_404(
         Document,
         id=document_id,
         owner=request.user,
     )
-
-    if request.method != "POST":
-        return redirect("dashboard")
 
     username = request.POST.get("username", "").strip()
     permission = request.POST.get("permission", "").strip()
@@ -363,10 +405,10 @@ def share_document(request, document_id):
         )
         return redirect("dashboard")
 
-    if permission not in [
+    if permission not in {
         DocumentAccess.READ,
         DocumentAccess.EDIT,
-    ]:
+    }:
         messages.error(
             request,
             "Invalid permission selected.",
@@ -392,7 +434,7 @@ def share_document(request, document_id):
         )
         return redirect("dashboard")
 
-    DocumentAccess.objects.update_or_create(
+    access, created = DocumentAccess.objects.update_or_create(
         document=document,
         user=shared_user,
         defaults={
@@ -400,27 +442,31 @@ def share_document(request, document_id):
         },
     )
 
-    AuditLog.objects.create(
+    details = (
+        f"Shared with {shared_user.username}: {permission}"
+        if created
+        else f"Updated access for {shared_user.username}: {permission}"
+    )
+
+    log_audit(
         user=request.user,
         document=document,
         action="document_share",
         result=AuditLog.SUCCESS,
-        details=f"Shared with {shared_user.username}: {permission}",
+        details=details,
     )
 
     messages.success(
         request,
         f"Document shared with {shared_user.username}.",
     )
-
     return redirect("dashboard")
 
 
 @login_required
+@require_POST
 def revoke_document_access(request, document_id, access_id):
-    if request.method != "POST":
-        return redirect("dashboard")
-
+    """Only the document owner can revoke access."""
     document = get_object_or_404(
         Document,
         id=document_id,
@@ -435,9 +481,7 @@ def revoke_document_access(request, document_id, access_id):
 
     recipient_username = access.user.username
 
-    access.delete()
-
-    AuditLog.objects.create(
+    log_audit(
         user=request.user,
         document=document,
         action="document_access_revoked",
@@ -445,19 +489,20 @@ def revoke_document_access(request, document_id, access_id):
         details=f"Access revoked for {recipient_username}",
     )
 
+    access.delete()
+
     messages.success(
         request,
         f"Access revoked for {recipient_username}.",
     )
-
     return redirect("dashboard")
 
 
 @login_required
 def admin_activity_dashboard(request):
-    # Only application Administrators can access this page.
+    """Only Administrators can view audit logs."""
     if get_user_role(request.user) != UserProfile.ADMINISTRATOR:
-        raise Http404("Page not found")
+        raise Http404("Page not found.")
 
     logs = AuditLog.objects.select_related(
         "user",
@@ -471,3 +516,4 @@ def admin_activity_dashboard(request):
             "logs": logs,
         },
     )
+

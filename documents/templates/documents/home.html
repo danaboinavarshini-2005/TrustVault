@@ -1,121 +1,166 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>TrustVault - Secure Document Sharing</title>
 
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f1f5f9;
-            margin: 0;
-            color: #1e293b;
-        }
+<title>TrustVault - Secure Document Sharing</title>
 
-        header {
-            background: #1e3a8a;
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
+<style>
+    * {
+        box-sizing: border-box;
+    }
 
+    body {
+        font-family: Arial, sans-serif;
+        background: #f1f5f9;
+        margin: 0;
+        color: #1e293b;
+    }
+
+    header {
+        background: #1e3a8a;
+        color: white;
+        padding: 25px 20px;
+        text-align: center;
+    }
+
+    header h1 {
+        margin: 0 0 10px;
+    }
+
+    header p {
+        margin: 0;
+    }
+
+    main {
+        max-width: 1000px;
+        margin: 45px auto;
+        padding: 20px;
+        text-align: center;
+    }
+
+    h2 {
+        color: #1e3a8a;
+    }
+
+    .features {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin: 35px 0;
+    }
+
+    .feature {
+        background: white;
+        padding: 25px 20px;
+        border-radius: 12px;
+        width: 250px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transition: transform 0.2s;
+    }
+
+    .feature:hover {
+        transform: translateY(-5px);
+    }
+
+    .feature h3 {
+        color: #1e3a8a;
+    }
+
+    .login-button {
+        display: inline-block;
+        background: #1e3a8a;
+        color: white;
+        padding: 14px 35px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: bold;
+        margin-top: 15px;
+        transition: background 0.2s;
+    }
+
+    .login-button:hover {
+        background: #2563eb;
+    }
+
+    footer {
+        text-align: center;
+        padding: 20px;
+        color: #64748b;
+    }
+
+    @media (max-width: 600px) {
         main {
-            max-width: 850px;
-            margin: 50px auto;
-            padding: 20px;
-            text-align: center;
-        }
-
-        h2 {
-            color: #1e3a8a;
-        }
-
-        .features {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            flex-wrap: wrap;
-            margin: 35px 0;
+            margin: 20px auto;
         }
 
         .feature {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            width: 220px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 350px;
         }
+    }
+</style>
 
-        .login-button {
-            display: inline-block;
-            background: #1e3a8a;
-            color: white;
-            padding: 14px 35px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: bold;
-            margin-top: 15px;
-            transition: background 0.2s;
-        }
 
-        .login-button:hover {
-            background: #2563eb;
-        }
-
-        footer {
-            text-align: center;
-            padding: 20px;
-            color: #64748b;
-        }
-    </style>
 </head>
 
 <body>
 
-    <header>
-        <h1>🔐 TrustVault</h1>
-        <p>Secure Document Sharing with a Real Audit Trail</p>
-    </header>
 
-    <main>
-        <h2>Your Documents. Your Control.</h2>
+<header>
+    <h1>🔐 TrustVault</h1>
+    <p>Secure Document Sharing and Management</p>
+</header>
 
-        <p>
-            Share documents securely, manage permissions,
-            and track document activity in one place.
-        </p>
+<main>
+    <h2>Welcome to TrustVault</h2>
 
-        <p>Welcome to TrustVault!</p>
+    <p>
+        Store, manage, and share your documents securely
+        with a simple document management system.
+    </p>
 
-        <div class="features">
+    <div class="features">
 
-            <div class="feature">
-                <h3>🔒 Secure Access</h3>
-                <p>Allow access only to authorized users.</p>
-            </div>
-
-            <div class="feature">
-                <h3>📁 Document Management</h3>
-                <p>Upload and organize your documents.</p>
-            </div>
-
-            <div class="feature">
-                <h3>📋 Audit Trail</h3>
-                <p>Track document actions and access attempts.</p>
-            </div>
-
+        <div class="feature">
+            <h3>🔒 Secure Access</h3>
+            <p>
+                Access your documents through the application's
+                authentication system.
+            </p>
         </div>
 
-        <a href="{% url 'login' %}" class="login-button">
-            Login to TrustVault
-        </a>
-    </main>
+        <div class="feature">
+            <h3>📁 Document Management</h3>
+            <p>
+                Upload and organize your documents
+                in one convenient place.
+            </p>
+        </div>
 
-    <footer>
-        <p>TrustVault © 2026</p>
-    </footer>
+        <div class="feature">
+            <h3>📋 Audit Trail</h3>
+            <p>
+                Track document actions and access attempts
+                through activity records.
+            </p>
+        </div>
+
+    </div>
+
+    <a href="{% url 'login' %}" class="login-button">
+        Login to TrustVault
+    </a>
+</main>
+
+<footer>
+    <p>TrustVault &copy; 2026</p>
+</footer>
+
 
 </body>
 </html>

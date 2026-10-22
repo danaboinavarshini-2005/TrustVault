@@ -1,98 +1,183 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TrustVault - Login</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f1f5f9;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-        }
 
+
+<title>TrustVault - Login</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        background: #f1f5f9;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 20px;
+    }
+
+    .login-box {
+        background: white;
+        padding: 35px;
+        border-radius: 15px;
+        width: 100%;
+        max-width: 380px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .logo {
+        text-align: center;
+        font-size: 42px;
+        margin-bottom: 10px;
+    }
+
+    h1 {
+        text-align: center;
+        color: #1e3a8a;
+        margin-bottom: 8px;
+    }
+
+    .subtitle {
+        text-align: center;
+        color: #64748b;
+        margin-bottom: 25px;
+    }
+
+    label {
+        display: block;
+        margin-top: 18px;
+        margin-bottom: 6px;
+        color: #334155;
+        font-weight: bold;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="email"] {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 7px;
+        font-size: 15px;
+    }
+
+    input:focus {
+        outline: 2px solid #93c5fd;
+        border-color: #2563eb;
+    }
+
+    .password-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .password-row input {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .toggle-password {
+        padding: 10px;
+        background: #e2e8f0;
+        color: #1e293b;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+    .login-button {
+        width: 100%;
+        margin-top: 24px;
+        padding: 13px;
+        background: #1e3a8a;
+        color: white;
+        border: none;
+        border-radius: 7px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .login-button:hover {
+        background: #1d4ed8;
+    }
+
+    .error {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+        border-radius: 7px;
+        padding: 10px;
+        text-align: center;
+        font-size: 14px;
+    }
+
+    .home-link {
+        text-align: center;
+        margin-top: 22px;
+    }
+
+    a {
+        color: #1e3a8a;
+        text-decoration: none;
+    }
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+    @media (max-width: 400px) {
         .login-box {
-            background: white;
-            padding: 35px;
-            border-radius: 15px;
-            width: 320px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            padding: 25px 20px;
         }
+    }
+</style>
 
-        h1 {
-            text-align: center;
-            color: #1e3a8a;
-        }
 
-        p {
-            text-align: center;
-            color: #64748b;
-        }
-
-        label {
-            display: block;
-            margin-top: 15px;
-        }
-
-        input {
-            width: 100%;
-            padding: 10px;
-            margin-top: 6px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            box-sizing: border-box;
-        }
-
-        button {
-            width: 100%;
-            margin-top: 22px;
-            padding: 12px;
-            background: #1e3a8a;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #1d4ed8;
-        }
-
-        .error {
-            color: #dc2626;
-        }
-
-        a {
-            color: #1e3a8a;
-        }
-    </style>
 </head>
+
 <body>
-    <div class="login-box">
-        <h1>TrustVault</h1>
-        <p>Secure Document Sharing</p>
 
-        {% if form.errors %}
-            <p class="error">Incorrect username or password.</p>
-        {% endif %}
 
-        <form method="post">
-            {% csrf_token %}
+<div class="login-box">
 
-            <label for="id_username">Username</label>
-            <input
-                type="text"
-                name="username"
-                id="id_username"
-                autocomplete="username"
-                required
-            >
+    <div class="logo" aria-hidden="true">🔐</div>
 
-            <label for="id_password">Password</label>
+    <h1>TrustVault</h1>
+
+    <p class="subtitle">Secure Document Sharing</p>
+
+    {% if form.errors %}
+        <p class="error" role="alert">
+            Incorrect username or password. Please try again.
+        </p>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        <label for="id_username">Username</label>
+
+        <input
+            type="text"
+            name="username"
+            id="id_username"
+            autocomplete="username"
+            required
+        >
+
+        <label for="id_password">Password</label>
+
+        <div class="password-row">
             <input
                 type="password"
                 name="password"
@@ -101,10 +186,41 @@
                 required
             >
 
-            <button type="submit">Log In</button>
-        </form>
+            <button
+                type="button"
+                class="toggle-password"
+                id="togglePassword"
+                aria-controls="id_password"
+                aria-pressed="false"
+            >
+                Show
+            </button>
+        </div>
 
-        <p><a href="/">Back to Home</a></p>
+        <button type="submit" class="login-button">
+            Log In
+        </button>
+    </form>
+
+    <div class="home-link">
+        <a href="/">← Back to Home</a>
     </div>
+
+</div>
+
+<script>
+    const passwordInput = document.getElementById("id_password");
+    const toggleButton = document.getElementById("togglePassword");
+
+    toggleButton.addEventListener("click", function () {
+        const isPassword = passwordInput.type === "password";
+
+        passwordInput.type = isPassword ? "text" : "password";
+        toggleButton.textContent = isPassword ? "Hide" : "Show";
+        toggleButton.setAttribute("aria-pressed", String(isPassword));
+    });
+</script>
+
+
 </body>
 </html>
