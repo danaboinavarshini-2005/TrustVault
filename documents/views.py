@@ -5,7 +5,9 @@ from pathlib import Path
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.views import LoginView, LogoutView
+from django.db import transaction
 from django.http import FileResponse, Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse_lazy
@@ -69,20 +71,65 @@ def log_audit(user, action, result, document=None, details=""):
 
 
 def home(request):
+    """Display the TrustVault home page."""
     return render(request, "documents/home.html")
 
 
+def register(request):
+    """
+    Register a new user with the default Viewer role.
+    Existing authenticated users are redirected to the dashboard.
+    """
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+
+        if form.is_valid():
+            with transaction.atomic():
+                user = form.save()
+
+                UserProfile.objects.get_or_create(
+                    user=user,
+                    defaults={
+                        "role": UserProfile.VIEWER,
+                    },
+                )
+
+            messages.success(
+                request,
+                "Your account was created successfully. Please log in.",
+            )
+
+            return redirect("login")
+
+    else:
+        form = UserCreationForm()
+
+    return render(
+        request,
+        "documents/register.html",
+        {
+            "form": form,
+        },
+    )
+
+
 class TrustVaultLoginView(LoginView):
+    """Display the login page."""
     template_name = "documents/login.html"
     redirect_authenticated_user = True
 
 
 class TrustVaultLogoutView(LogoutView):
+    """Log out the current user."""
     next_page = reverse_lazy("home")
 
 
 @login_required
 def dashboard(request):
+    """Display documents, shared documents, and upload functionality."""
     role = get_user_role(request.user)
 
     # Handle document uploads.

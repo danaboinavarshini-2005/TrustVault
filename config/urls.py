@@ -1,3 +1,4 @@
+
 from django.contrib import admin
 from django.urls import path
 from documents import views
@@ -12,6 +13,12 @@ urlpatterns = [
         "login/",
         views.TrustVaultLoginView.as_view(),
         name="login",
+    ),
+
+    path(
+        "register/",
+        views.register,
+        name="register",
     ),
 
     path(
@@ -49,9 +56,11 @@ urlpatterns = [
         views.revoke_document_access,
         name="revoke_document_access",
     ),
+
     path(
         "documents/<int:document_id>/edit/",
         views.edit_document,
-         name="edit_document",
+        name="edit_document",
     ),
 ]
+
