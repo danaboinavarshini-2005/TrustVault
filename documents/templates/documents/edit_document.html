@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Document | TrustVault</title>
+</head>
+<body>
+    <h1>Edit Document</h1>
+
+    {% if messages %}
+        {% for message in messages %}
+            <p>{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        <label for="title">Document Title</label>
+        <input
+            type="text"
+            id="title"
+            name="title"
+            maxlength="200"
+            value="{{ document.title }}"
+            required
+        >
+
+        <br><br>
+
+        <label for="category">Category</label>
+        <input
+            type="text"
+            id="category"
+            name="category"
+            maxlength="100"
+            value="{{ document.category }}"
+            required
+        >
+
+        <br><br>
+
+        <button type="submit">Save Changes</button>
+        <a href="{% url 'dashboard' %}">Cancel</a>
+    </form>
+</body>
+</html>

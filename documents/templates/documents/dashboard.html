@@ -21,7 +21,7 @@
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 15px;
         }
 
         header h2 {
@@ -30,7 +30,7 @@
 
         main {
             max-width: 900px;
-            margin: 40px auto;
+            margin: 30px auto;
             padding: 20px;
         }
 
@@ -42,19 +42,23 @@
             box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
         }
 
-        input,
-        select {
+        input, select {
             display: block;
             box-sizing: border-box;
-            margin: 12px 0;
+            margin: 8px 0 14px;
             padding: 10px;
             width: 100%;
             border: 1px solid #cbd5e1;
             border-radius: 6px;
         }
 
-        button,
-        .button {
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        button, .button {
             display: inline-block;
             background: #2563eb;
             color: white;
@@ -64,11 +68,27 @@
             cursor: pointer;
             text-decoration: none;
             font-size: 14px;
+            margin: 3px 2px;
         }
 
-        .logout-button,
-        .revoke-button {
+        button:hover, .button:hover {
+            background: #1d4ed8;
+        }
+
+        .admin-button {
+            background: #059669;
+        }
+
+        .logout-button, .revoke-button {
             background: #dc2626;
+        }
+
+        .edit-button {
+            background: #7c3aed;
+        }
+
+        .edit-button:hover {
+            background: #6d28d9;
         }
 
         .message {
@@ -98,19 +118,45 @@
             border-radius: 8px;
         }
 
-        .document-item label {
-            display: block;
-            margin-top: 10px;
-            font-weight: bold;
-        }
-
         .muted {
             color: #64748b;
             font-size: 14px;
         }
 
-        a {
-            color: #1d4ed8;
+        .header-links {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .filter-grid input {
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 600px) {
+            header {
+                align-items: flex-start;
+            }
+
+            main {
+                margin: 15px auto;
+                padding: 12px;
+            }
+
+            .card {
+                padding: 18px;
+            }
+
+            .filter-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -120,223 +166,285 @@
 <header>
     <h2>TrustVault | My Documents</h2>
 
-    <form method="post" action="{% url 'logout' %}">
-        {% csrf_token %}
-        <button type="submit" class="logout-button">
-            Logout
-        </button>
-    </form>
+    <div class="header-links">
+        {% if user_role == "administrator" %}
+            <a class="button admin-button"
+               href="{% url 'admin_activity_dashboard' %}">
+                🔐 Admin Activity
+            </a>
+        {% endif %}
+
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="logout-button">Logout</button>
+        </form>
+    </div>
 </header>
 
 <main>
 
-    <!-- Display messages -->
     {% if messages %}
         {% for message in messages %}
-            <div class="message
-                {% if message.tags == 'error' %}error{% endif %}">
+            <div class="message {% if message.tags == 'error' %}error{% endif %}">
                 {{ message }}
             </div>
         {% endfor %}
     {% endif %}
 
-    <!-- Upload document -->
+    <!-- Search and filters -->
     <div class="card">
-        <h2>Upload a Document</h2>
+        <h2>Search Documents</h2>
 
-        <form method="post"
-              action="{% url 'dashboard' %}"
-              enctype="multipart/form-data">
-
-            {% csrf_token %}
-
-            <label for="title">Document Title</label>
+        <form method="get" action="{% url 'dashboard' %}">
+            <label for="search">Document Title</label>
             <input
                 type="text"
-                id="title"
-                name="title"
-                maxlength="200"
+                id="search"
+                name="q"
+                value="{{ search_query }}"
                 placeholder="Enter document title"
-                required
             >
 
-            <label for="file">Choose File</label>
-            <input
-                type="file"
-                id="file"
-                name="file"
-                accept=".pdf,.txt,.png,.jpg,.jpeg"
-                required
-            >
+            <div class="filter-grid">
+                <div>
+                    <label for="owner">Owner Username</label>
+                    <input
+                        type="text"
+                        id="owner"
+                        name="owner"
+                        value="{{ owner_query }}"
+                        placeholder="Owner username"
+                    >
+                </div>
 
-            <button type="submit">
-                Upload Document
-            </button>
+                <div>
+                    <label for="category-filter">Category</label>
+                    <input
+                        type="text"
+                        id="category-filter"
+                        name="category"
+                        value="{{ category_query }}"
+                        placeholder="e.g. Reports"
+                    >
+                </div>
+
+                <div>
+                    <label for="uploaded-date">Upload Date</label>
+                    <input
+                        type="date"
+                        id="uploaded-date"
+                        name="uploaded_date"
+                        value="{{ upload_date }}"
+                    >
+                </div>
+            </div>
+
+            <button type="submit">Apply Filters</button>
+            <a class="button" href="{% url 'dashboard' %}">Clear Filters</a>
         </form>
 
         <p class="muted">
-            Allowed formats: PDF, TXT, PNG, JPG and JPEG.
-            Maximum file size: 5 MB.
+            These filters currently search your own documents.
+            Shared documents are listed separately below.
         </p>
     </div>
 
-    <!-- My Documents -->
+    <!-- Upload document -->
+    {% if can_upload %}
+        <div class="card">
+            <h2>Upload a Document</h2>
+
+            <form
+                method="post"
+                action="{% url 'dashboard' %}"
+                enctype="multipart/form-data">
+
+                {% csrf_token %}
+
+                <label for="title">Document Title</label>
+                <input
+                    type="text"
+                    id="title"
+                    name="title"
+                    maxlength="200"
+                    placeholder="Enter document title"
+                    required
+                >
+
+                <label for="category">Category</label>
+                <input
+                    type="text"
+                    id="category"
+                    name="category"
+                    maxlength="100"
+                    value="General"
+                    placeholder="e.g. Reports, Personal, Legal"
+                    required
+                >
+
+                <label for="file">Choose File</label>
+                <input
+                    type="file"
+                    id="file"
+                    name="file"
+                    accept=".pdf,.txt,.png,.jpg,.jpeg"
+                    required
+                >
+
+                <button type="submit">Upload Document</button>
+            </form>
+
+            <p class="muted">
+                Allowed extensions: PDF, TXT, PNG, JPG and JPEG.
+                Maximum file size: 5 MB.
+            </p>
+        </div>
+    {% endif %}
+
+    <!-- Owned documents -->
     <div class="card">
         <h2>My Documents</h2>
 
-        {% if documents %}
-            {% for document in documents %}
+        {% for document in documents %}
+            <div class="document-item">
+                <strong>{{ document.title }}</strong>
 
-                <div class="document-item">
+                <p>
+                    Category: {{ document.category|default:"General" }}
+                </p>
 
-                    <strong>{{ document.title }}</strong>
+                <p class="muted">
+                    Owner: {{ document.owner.username }}<br>
+                    Uploaded: {{ document.uploaded_at|date:"d M Y, H:i" }}
+                </p>
 
-                    <p class="muted">
-                        Uploaded:
-                        {{ document.uploaded_at|date:"d M Y, H:i" }}
-                    </p>
+                <a class="button"
+                   href="{% url 'download_document' document.id %}">
+                    Download
+                </a>
 
-                    <a
-                        class="button"
-                        href="{% url 'download_document' document.id %}">
-                        Download
+                {% if document.owner_id == user.id %}
+                    <a class="button edit-button"
+                       href="{% url 'edit_document' document.id %}">
+                        Edit Details
                     </a>
+                {% endif %}
 
-                    <!-- Share document -->
-                    <form
-                        method="post"
-                        action="{% url 'share_document' document.id %}">
+                <!-- Share document -->
+                <form
+                    method="post"
+                    action="{% url 'share_document' document.id %}">
 
-                        {% csrf_token %}
+                    {% csrf_token %}
 
-                        <h3>Share this document</h3>
+                    <h3>Share this document</h3>
 
-                        <label for="username-{{ document.id }}">
-                            Recipient Username
-                        </label>
+                    <label for="username-{{ document.id }}">
+                        Recipient Username
+                    </label>
 
-                        <input
-                            type="text"
-                            id="username-{{ document.id }}"
-                            name="username"
-                            placeholder="Enter the recipient's username"
-                            required
-                        >
+                    <input
+                        type="text"
+                        id="username-{{ document.id }}"
+                        name="username"
+                        placeholder="Enter recipient username"
+                        required
+                    >
 
-                        <label for="permission-{{ document.id }}">
-                            Permission
-                        </label>
+                    <label for="permission-{{ document.id }}">
+                        Permission
+                    </label>
 
-                        <select
-                            id="permission-{{ document.id }}"
-                            name="permission"
-                            required>
+                    <select
+                        id="permission-{{ document.id }}"
+                        name="permission"
+                        required>
 
-                            <option value="read">
-                                READ — Can access and download
-                            </option>
+                        <option value="read">
+                            READ — Can view and download
+                        </option>
 
-                            <option value="edit">
-                                EDIT — Currently allows access and download
-                            </option>
+                        <option value="edit">
+                            EDIT — Can view, download and edit details
+                        </option>
+                    </select>
 
-                        </select>
+                    <button type="submit">Share Document</button>
+                </form>
 
-                        <button type="submit">
-                            Share Document
-                        </button>
-                    </form>
+                <!-- Manage existing access -->
+                <h3>Manage Shared Access</h3>
 
-                    <!-- Manage existing access -->
-                    <h3>Manage Shared Access</h3>
-
-                    {% for access in document.access_permissions.all %}
-
-                        <div class="document-item">
-
-                            <p>
-                                Shared with:
-                                <strong>{{ access.user.username }}</strong>
-                            </p>
-
-                            <p>
-                                Permission:
-                                {{ access.get_permission_display }}
-                            </p>
-
-                            <form
-                                method="post"
-                                action="{% url 'revoke_document_access' document.id access.id %}"
-                                onsubmit="return confirm('Are you sure you want to revoke access for {{ access.user.username }}?');">
-
-                                {% csrf_token %}
-
-                                <button
-                                    type="submit"
-                                    class="revoke-button">
-                                    Revoke Access
-                                </button>
-
-                            </form>
-
-                        </div>
-
-                    {% empty %}
-
-                        <p class="muted">
-                            This document has not been shared with anyone.
+                {% for access in document.access_permissions.all %}
+                    <div class="document-item">
+                        <p>
+                            Shared with:
+                            <strong>{{ access.user.username }}</strong>
                         </p>
 
-                    {% endfor %}
+                        <p>
+                            Permission: {{ access.get_permission_display }}
+                        </p>
 
-                </div>
+                        <form
+                            method="post"
+                            action="{% url 'revoke_document_access' document.id access.id %}"
+                            onsubmit="return confirm('Revoke this access?');">
 
-            {% endfor %}
+                            {% csrf_token %}
 
-        {% else %}
-
-            <p>You haven't uploaded any documents yet.</p>
-
-        {% endif %}
+                            <button type="submit" class="revoke-button">
+                                Revoke Access
+                            </button>
+                        </form>
+                    </div>
+                {% empty %}
+                    <p class="muted">
+                        This document has not been shared with anyone.
+                    </p>
+                {% endfor %}
+            </div>
+        {% empty %}
+            <p>No documents match your search filters.</p>
+        {% endfor %}
     </div>
 
     <!-- Documents shared with the logged-in user -->
     <div class="card">
         <h2>Shared With Me</h2>
 
-        {% if shared_accesses %}
+        {% for access in shared_accesses %}
+            <div class="document-item">
+                <strong>{{ access.document.title }}</strong>
 
-            {% for access in shared_accesses %}
+                <p>
+                    Category:
+                    {{ access.document.category|default:"General" }}
+                </p>
 
-                <div class="document-item">
+                <p>
+                    Shared by: {{ access.document.owner.username }}
+                </p>
 
-                    <strong>{{ access.document.title }}</strong>
+                <p>
+                    Permission: {{ access.get_permission_display }}
+                </p>
 
-                    <p>
-                        Shared by:
-                        {{ access.document.owner.username }}
-                    </p>
+                <a class="button"
+                   href="{% url 'download_document' access.document.id %}">
+                    Download Shared Document
+                </a>
 
-                    <p>
-                        Permission:
-                        {{ access.get_permission_display }}
-                    </p>
-
-                    <a
-                        class="button"
-                        href="{% url 'download_document' access.document.id %}">
-                        Download Shared Document
+                {% if access.permission == "edit" %}
+                    <a class="button edit-button"
+                       href="{% url 'edit_document' access.document.id %}">
+                        Edit Details
                     </a>
-
-                </div>
-
-            {% endfor %}
-
-        {% else %}
-
+                {% endif %}
+            </div>
+        {% empty %}
             <p>No documents have been shared with you yet.</p>
-
-        {% endif %}
+        {% endfor %}
     </div>
 
     <!-- Security information -->
@@ -346,17 +454,13 @@
         <p>You must log in to access this dashboard.</p>
 
         <p>
-            Only you can share documents that you own.
-            Unauthorized download attempts are recorded in the audit log.
-        </p>
-
-        <p>
-            Document owners can revoke previously granted access.
+            Only document owners can share their documents or revoke access.
+            Unauthorized download and edit attempts are recorded in the audit log.
         </p>
 
         <p class="muted">
-            Note: EDIT permission does not yet provide document-editing
-            functionality.
+            Document editing is restricted to owners and users with explicit
+            EDIT permission.
         </p>
     </div>
 

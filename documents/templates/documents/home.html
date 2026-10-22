@@ -4,78 +4,69 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>TrustVault | Secure Document Sharing</title>
+    <title>TrustVault - Secure Document Sharing</title>
 
     <style>
-        * {
-            box-sizing: border-box;
-        }
-
         body {
-            margin: 0;
             font-family: Arial, sans-serif;
             background: #f1f5f9;
-            color: #172554;
+            margin: 0;
+            color: #1e293b;
         }
 
         header {
-            background: #14213d;
+            background: #1e3a8a;
             color: white;
-            padding: 25px 8%;
-        }
-
-        header h1 {
-            margin: 0;
-            font-size: 30px;
-        }
-
-        header p {
-            color: #cbd5e1;
+            padding: 20px;
+            text-align: center;
         }
 
         main {
-            max-width: 1000px;
-            margin: 55px auto;
+            max-width: 850px;
+            margin: 50px auto;
             padding: 20px;
-        }
-
-        .hero {
-            background: white;
             text-align: center;
-            padding: 55px 25px;
-            border-radius: 15px;
         }
 
-        .hero h2 {
-            font-size: 36px;
-        }
-
-        .hero p {
-            color: #64748b;
-            line-height: 1.8;
+        h2 {
+            color: #1e3a8a;
         }
 
         .features {
-            display: grid;
-            grid-template-columns:
-                repeat(auto-fit, minmax(220px, 1fr));
+            display: flex;
+            justify-content: center;
             gap: 20px;
-            margin-top: 25px;
+            flex-wrap: wrap;
+            margin: 35px 0;
         }
 
-        .card {
+        .feature {
             background: white;
-            padding: 25px;
+            padding: 20px;
             border-radius: 12px;
+            width: 220px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
-        .card h3 {
-            color: #2563eb;
+        .login-button {
+            display: inline-block;
+            background: #1e3a8a;
+            color: white;
+            padding: 14px 35px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+
+        .login-button:hover {
+            background: #2563eb;
         }
 
         footer {
             text-align: center;
-            padding: 25px;
+            padding: 20px;
             color: #64748b;
         }
     </style>
@@ -89,39 +80,41 @@
     </header>
 
     <main>
-        <section class="hero">
-            <h2>Your Documents. Your Control.</h2>
+        <h2>Your Documents. Your Control.</h2>
 
-            <p>
-                Share documents securely, manage permissions,
-                and track document activity in one place.
-            </p>
+        <p>
+            Share documents securely, manage permissions,
+            and track document activity in one place.
+        </p>
 
-            <p>Welcome to TrustVault!</p>
-        </section>
+        <p>Welcome to TrustVault!</p>
 
-        <section class="features">
+        <div class="features">
 
-            <div class="card">
+            <div class="feature">
                 <h3>🔒 Secure Access</h3>
                 <p>Allow access only to authorized users.</p>
             </div>
 
-            <div class="card">
+            <div class="feature">
                 <h3>📁 Document Management</h3>
                 <p>Upload and organize your documents.</p>
             </div>
 
-            <div class="card">
+            <div class="feature">
                 <h3>📋 Audit Trail</h3>
                 <p>Track document actions and access attempts.</p>
             </div>
 
-        </section>
+        </div>
+
+        <a href="{% url 'login' %}" class="login-button">
+            Login to TrustVault
+        </a>
     </main>
 
     <footer>
-        TrustVault © 2026
+        <p>TrustVault © 2026</p>
     </footer>
 
 </body>

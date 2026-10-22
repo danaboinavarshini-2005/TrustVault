@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustVault | Administrator Activity</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 30px;
+            font-family: Arial, sans-serif;
+            background: #f3f5f9;
+            color: #1f2937;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .header {
+            background: #172554;
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            margin: 0 0 10px;
+        }
+
+        .header p {
+            margin: 0;
+            color: #dbeafe;
+        }
+
+        .card {
+            background: white;
+            padding: 22px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 14px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        th {
+            background: #eff6ff;
+            color: #1e3a8a;
+        }
+
+        tr:hover {
+            background: #f9fafb;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .denied {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .back-button {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 11px 17px;
+            background: #1d4ed8;
+            color: white;
+            text-decoration: none;
+            border-radius: 7px;
+        }
+
+        .back-button:hover {
+            background: #1e40af;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 30px;
+            color: #6b7280;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 12px;
+            }
+
+            .header,
+            .card {
+                padding: 16px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="container">
+
+        <header class="header">
+            <h1>TrustVault Activity Dashboard</h1>
+            <p>Monitor document activity and security events.</p>
+        </header>
+
+        <section class="card">
+            <h2>Audit Trail</h2>
+            <p>Recent recorded actions appear below, newest first.</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date &amp; Time</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Document</th>
+                        <th>Result</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.timestamp|date:"d M Y, H:i" }}</td>
+                        <td>
+                            {% if log.user %}
+                                {{ log.user.username }}
+                            {% else %}
+                                Unknown
+                            {% endif %}
+                        </td>
+                        <td>{{ log.action }}</td>
+                        <td>
+                            {% if log.document %}
+                                {{ log.document.title }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.result == "denied" %}
+                                <span class="badge denied">
+                                    Denied
+                                </span>
+                            {% else %}
+                                <span class="badge success">
+                                    {{ log.result|title }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>{{ log.details|default:"—" }}</td>
+                    </tr>
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="empty">
+                            No activity has been recorded yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        <a href="{% url 'dashboard' %}" class="back-button">
+            Back to Dashboard
+        </a>
+
+    </main>
+</body>
+</html>
