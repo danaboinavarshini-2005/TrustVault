@@ -1,14 +1,26 @@
+# Python
 __pycache__/
 *.py[cod]
+
+# Virtual environments
 .venv/
 venv/
+
+# Environment variables and secrets
 .env
 .env.*
+!.env.example
+
+# Local database
 db.sqlite3
+
+# Generated files
 staticfiles/
+media/
 .vscode/
-media/
-# Uploaded and test documents
-media/
+
+# Uploaded and generated test documents
+documents/edit_test*.txt
+documents/new_test*.txt
 documents/test*.txt
 documents/text_documents*.txt
