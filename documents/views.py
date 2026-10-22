@@ -50,13 +50,13 @@ def get_user_role(user):
 
 def can_upload_documents(user):
     """Only Administrators and Owners can upload documents."""
-    return (
-        user.is_authenticated
-        and get_user_role(user) in {
-            UserProfile.ADMINISTRATOR,
-            UserProfile.OWNER,
-        }
-    )
+    if not user.is_authenticated:
+        return False
+
+    return get_user_role(user) in {
+        UserProfile.ADMINISTRATOR,
+        UserProfile.OWNER,
+    }
 
 
 def log_audit(user, action, result, document=None, details=""):
@@ -76,10 +76,7 @@ def home(request):
 
 
 def register(request):
-    """
-    Register a new user with the default Viewer role.
-    Existing authenticated users are redirected to the dashboard.
-    """
+    """Register a new user with the default Viewer role."""
     if request.user.is_authenticated:
         return redirect("dashboard")
 
@@ -110,9 +107,7 @@ def register(request):
     return render(
         request,
         "documents/register.html",
-        {
-            "form": form,
-        },
+        {"form": form},
     )
 
 
@@ -130,11 +125,14 @@ class TrustVaultLogoutView(LogoutView):
 @login_required
 def dashboard(request):
     """Display documents, shared documents, and upload functionality."""
+
     role = get_user_role(request.user)
+    can_upload = can_upload_documents(request.user)
 
     # Handle document uploads.
     if request.method == "POST":
-        if not can_upload_documents(request.user):
+
+        if not can_upload:
             log_audit(
                 user=request.user,
                 action="document_upload",
@@ -146,6 +144,7 @@ def dashboard(request):
                 request,
                 "Your role does not permit document uploads.",
             )
+
             return redirect("dashboard")
 
         title = request.POST.get("title", "").strip()
@@ -226,6 +225,7 @@ def dashboard(request):
             request,
             "Document uploaded successfully!",
         )
+
         return redirect("dashboard")
 
     # Display documents owned by the current user.
@@ -292,7 +292,7 @@ def dashboard(request):
             "category_query": category_query,
             "upload_date": upload_date,
             "user_role": role,
-            "can_upload": can_upload_documents(request.user),
+            "can_upload": can_upload,
         },
     )
 
@@ -300,6 +300,7 @@ def dashboard(request):
 @login_required
 def edit_document(request, document_id):
     """Allow owners and users with EDIT permission to edit metadata."""
+
     document = get_object_or_404(
         Document,
         id=document_id,
@@ -321,6 +322,7 @@ def edit_document(request, document_id):
             result=AuditLog.DENIED,
             details="Edit denied: insufficient permission.",
         )
+
         raise Http404("Document not found.")
 
     if request.method == "POST":
@@ -359,20 +361,20 @@ def edit_document(request, document_id):
                 request,
                 "Document updated successfully!",
             )
+
             return redirect("dashboard")
 
     return render(
         request,
         "documents/edit_document.html",
-        {
-            "document": document,
-        },
+        {"document": document},
     )
 
 
 @login_required
 def download_document(request, document_id):
     """Allow owners and authorized users to download documents."""
+
     document = get_object_or_404(
         Document,
         id=document_id,
@@ -397,6 +399,7 @@ def download_document(request, document_id):
             result=AuditLog.DENIED,
             details="Download denied: no permission.",
         )
+
         raise Http404("Document not found.")
 
     try:
@@ -410,6 +413,7 @@ def download_document(request, document_id):
             result=AuditLog.DENIED,
             details="Download failed: file unavailable.",
         )
+
         raise Http404("Document file is unavailable.")
 
     try:
@@ -436,6 +440,7 @@ def download_document(request, document_id):
 @require_POST
 def share_document(request, document_id):
     """Only the document owner can share it."""
+
     document = get_object_or_404(
         Document,
         id=document_id,
@@ -507,6 +512,7 @@ def share_document(request, document_id):
         request,
         f"Document shared with {shared_user.username}.",
     )
+
     return redirect("dashboard")
 
 
@@ -514,6 +520,7 @@ def share_document(request, document_id):
 @require_POST
 def revoke_document_access(request, document_id, access_id):
     """Only the document owner can revoke access."""
+
     document = get_object_or_404(
         Document,
         id=document_id,
@@ -542,12 +549,14 @@ def revoke_document_access(request, document_id, access_id):
         request,
         f"Access revoked for {recipient_username}.",
     )
+
     return redirect("dashboard")
 
 
 @login_required
 def admin_activity_dashboard(request):
     """Only Administrators can view audit logs."""
+
     if get_user_role(request.user) != UserProfile.ADMINISTRATOR:
         raise Http404("Page not found.")
 
@@ -559,8 +568,6 @@ def admin_activity_dashboard(request):
     return render(
         request,
         "documents/admin_activity.html",
-        {
-            "logs": logs,
-        },
+        {"logs": logs},
     )
 

@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -102,6 +103,14 @@
             background: #fee2e2;
         }
 
+        .notice {
+            background: #eff6ff;
+            border-left: 4px solid #2563eb;
+            padding: 14px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+
         .document-item {
             padding: 16px 0;
             border-bottom: 1px solid #e2e8f0;
@@ -167,10 +176,11 @@
     <h2>TrustVault | My Documents</h2>
 
     <div class="header-links">
+
         {% if user_role == "administrator" %}
             <a class="button admin-button"
                href="{% url 'admin_activity_dashboard' %}">
-                🔐 Admin Activity
+                Admin Activity
             </a>
         {% endif %}
 
@@ -178,6 +188,7 @@
             {% csrf_token %}
             <button type="submit" class="logout-button">Logout</button>
         </form>
+
     </div>
 </header>
 
@@ -191,11 +202,27 @@
         {% endfor %}
     {% endif %}
 
+    <!-- Display the current user's role -->
+    <div class="notice">
+        <strong>Your role:</strong>
+        {{ user_role|default:"Viewer"|title }}
+
+        {% if can_upload %}
+            <p>You are authorized to upload documents.</p>
+        {% else %}
+            <p>
+                Your current role does not permit document uploads.
+                Contact your administrator if you need upload access.
+            </p>
+        {% endif %}
+    </div>
+
     <!-- Search and filters -->
     <div class="card">
         <h2>Search Documents</h2>
 
         <form method="get" action="{% url 'dashboard' %}">
+
             <label for="search">Document Title</label>
             <input
                 type="text"
@@ -206,6 +233,7 @@
             >
 
             <div class="filter-grid">
+
                 <div>
                     <label for="owner">Owner Username</label>
                     <input
@@ -237,10 +265,15 @@
                         value="{{ upload_date }}"
                     >
                 </div>
+
             </div>
 
             <button type="submit">Apply Filters</button>
-            <a class="button" href="{% url 'dashboard' %}">Clear Filters</a>
+
+            <a class="button" href="{% url 'dashboard' %}">
+                Clear Filters
+            </a>
+
         </form>
 
         <p class="muted">
@@ -249,8 +282,9 @@
         </p>
     </div>
 
-    <!-- Upload document -->
+    <!-- Upload document: authorized roles only -->
     {% if can_upload %}
+
         <div class="card">
             <h2>Upload a Document</h2>
 
@@ -292,6 +326,7 @@
                 >
 
                 <button type="submit">Upload Document</button>
+
             </form>
 
             <p class="muted">
@@ -299,6 +334,7 @@
                 Maximum file size: 5 MB.
             </p>
         </div>
+
     {% endif %}
 
     <!-- Owned documents -->
@@ -306,7 +342,9 @@
         <h2>My Documents</h2>
 
         {% for document in documents %}
+
             <div class="document-item">
+
                 <strong>{{ document.title }}</strong>
 
                 <p>
@@ -324,88 +362,101 @@
                 </a>
 
                 {% if document.owner_id == user.id %}
+
                     <a class="button edit-button"
                        href="{% url 'edit_document' document.id %}">
                         Edit Details
                     </a>
+
+                    <form
+                        method="post"
+                        action="{% url 'share_document' document.id %}">
+
+                        {% csrf_token %}
+
+                        <h3>Share this document</h3>
+
+                        <label for="username-{{ document.id }}">
+                            Recipient Username
+                        </label>
+
+                        <input
+                            type="text"
+                            id="username-{{ document.id }}"
+                            name="username"
+                            placeholder="Enter recipient username"
+                            required
+                        >
+
+                        <label for="permission-{{ document.id }}">
+                            Permission
+                        </label>
+
+                        <select
+                            id="permission-{{ document.id }}"
+                            name="permission"
+                            required>
+
+                            <option value="read">
+                                READ — Can view and download
+                            </option>
+
+                            <option value="edit">
+                                EDIT — Can view, download and edit details
+                            </option>
+
+                        </select>
+
+                        <button type="submit">Share Document</button>
+
+                    </form>
+
+                    <h3>Manage Shared Access</h3>
+
+                    {% for access in document.access_permissions.all %}
+
+                        <div class="document-item">
+
+                            <p>
+                                Shared with:
+                                <strong>{{ access.user.username }}</strong>
+                            </p>
+
+                            <p>
+                                Permission: {{ access.get_permission_display }}
+                            </p>
+
+                            <form
+                                method="post"
+                                action="{% url 'revoke_document_access' document.id access.id %}"
+                                onsubmit="return confirm('Revoke this access?');">
+
+                                {% csrf_token %}
+
+                                <button type="submit" class="revoke-button">
+                                    Revoke Access
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    {% empty %}
+
+                        <p class="muted">
+                            This document has not been shared with anyone.
+                        </p>
+
+                    {% endfor %}
+
                 {% endif %}
 
-                <!-- Share document -->
-                <form
-                    method="post"
-                    action="{% url 'share_document' document.id %}">
-
-                    {% csrf_token %}
-
-                    <h3>Share this document</h3>
-
-                    <label for="username-{{ document.id }}">
-                        Recipient Username
-                    </label>
-
-                    <input
-                        type="text"
-                        id="username-{{ document.id }}"
-                        name="username"
-                        placeholder="Enter recipient username"
-                        required
-                    >
-
-                    <label for="permission-{{ document.id }}">
-                        Permission
-                    </label>
-
-                    <select
-                        id="permission-{{ document.id }}"
-                        name="permission"
-                        required>
-
-                        <option value="read">
-                            READ — Can view and download
-                        </option>
-
-                        <option value="edit">
-                            EDIT — Can view, download and edit details
-                        </option>
-                    </select>
-
-                    <button type="submit">Share Document</button>
-                </form>
-
-                <!-- Manage existing access -->
-                <h3>Manage Shared Access</h3>
-
-                {% for access in document.access_permissions.all %}
-                    <div class="document-item">
-                        <p>
-                            Shared with:
-                            <strong>{{ access.user.username }}</strong>
-                        </p>
-
-                        <p>
-                            Permission: {{ access.get_permission_display }}
-                        </p>
-
-                        <form
-                            method="post"
-                            action="{% url 'revoke_document_access' document.id access.id %}"
-                            onsubmit="return confirm('Revoke this access?');">
-
-                            {% csrf_token %}
-
-                            <button type="submit" class="revoke-button">
-                                Revoke Access
-                            </button>
-                        </form>
-                    </div>
-                {% empty %}
-                    <p class="muted">
-                        This document has not been shared with anyone.
-                    </p>
-                {% endfor %}
             </div>
+
         {% empty %}
+
             <p>No documents match your search filters.</p>
+
         {% endfor %}
     </div>
 
@@ -414,7 +465,9 @@
         <h2>Shared With Me</h2>
 
         {% for access in shared_accesses %}
+
             <div class="document-item">
+
                 <strong>{{ access.document.title }}</strong>
 
                 <p>
@@ -436,14 +489,20 @@
                 </a>
 
                 {% if access.permission == "edit" %}
+
                     <a class="button edit-button"
                        href="{% url 'edit_document' access.document.id %}">
                         Edit Details
                     </a>
+
                 {% endif %}
+
             </div>
+
         {% empty %}
+
             <p>No documents have been shared with you yet.</p>
+
         {% endfor %}
     </div>
 
@@ -464,9 +523,12 @@
         </p>
     </div>
 
-    <p><a href="/">Return to Home</a></p>
+    <p>
+        <a href="/">Return to Home</a>
+    </p>
 
 </main>
 
 </body>
 </html>
+
